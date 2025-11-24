@@ -4,12 +4,6 @@
   <meta charset="UTF-8">
   <title>Tress Meniu</title>
 
-  <!-- Correct MIME for PDF.js -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js" integrity="sha512-ml/QKfG3+Yes6TwOzQb7aCNtJF4PUyha6R3w8pSTo/VJSywl7ZreYvvtUso7fKevpsI+pYVVwnu82YO0q3V6eg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-  <!-- PDF.js Worker -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js" integrity="sha512-H2G2FRj4ediSCLuq5Ua9fNy66QfE39rDnY/6CEsrSxAJtMXuJu16nsrvb1xrL1/TLSNPuOzWxRVweHUcAP/9RA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
   <style>
     body {
       margin: 0;
@@ -35,15 +29,22 @@
 
 <div id="viewer"></div>
 
-<script>
-  const url = "tress.pdf";
+<script type="module">
+  import * as pdfjsLib from "./pdf.mjs";
+
+  // Worker for ES module build
+  pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.mjs";
 
   const viewer = document.getElementById("viewer");
+  const url = "tress.pdf"; // your PDF
 
-  pdfjsLib.getDocument({
+  const loadingTask = pdfjsLib.getDocument({
     url,
-    rangeChunkSize: 65536 // progressive loading
-  }).promise.then(async pdf => {
+    rangeChunkSize: 65536  // progressive streaming
+  });
+
+  loadingTask.promise.then(async pdf => {
+    console.log("PDF loaded. Pages:", pdf.numPages);
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
