@@ -32,34 +32,49 @@
 <script type="module">
   import * as pdfjsLib from "./pdf.mjs";
 
-  // Worker for ES module build
+  // Worker
   pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.mjs";
 
   const viewer = document.getElementById("viewer");
-  const url = "tress.pdf"; // your PDF
+  const url = "tress.pdf";
 
   const loadingTask = pdfjsLib.getDocument({
     url,
-    rangeChunkSize: 65536  // progressive streaming
+    rangeChunkSize: 65536   // Progressive load
   });
 
   loadingTask.promise.then(async pdf => {
     console.log("PDF loaded. Pages:", pdf.numPages);
 
+    // High-resolution settings
+    const baseScale = 3;                    // Increase for sharper render
+    const dpiScale  = window.devicePixelRatio; // Supports HiDPI screens
+
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+
       const page = await pdf.getPage(pageNum);
 
-      const viewport = page.getViewport({ scale: 1.2 });
+      const viewport = page.getViewport({
+        scale: baseScale * dpiScale
+      });
+
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 
-      canvas.width = viewport.width;
+      // Render at high resolution internally
+      canvas.width  = viewport.width;
       canvas.height = viewport.height;
+
+      // Display size (makes the canvas appear normal size)
+      canvas.style.width  = (viewport.width  / dpiScale) + "px";
+      canvas.style.height = (viewport.height / dpiScale) + "px";
+
       viewer.appendChild(canvas);
 
+      // Render the page
       page.render({
         canvasContext: ctx,
-        viewport: viewport
+        viewport
       });
     }
   });
