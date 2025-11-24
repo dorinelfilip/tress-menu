@@ -1,83 +1,78 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Tress Meniu</title>
+  <meta charset="UTF-8" />
+  <title>PDF.js Multi-Page Full Width Viewer</title>
 
   <style>
     body {
       margin: 0;
-      font-family: system-ui, sans-serif;
-      background: #f0f0f0;
+      background: #eee;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
-
-    #viewer {
+    .page-container {
       width: 100%;
-      height: 100vh;
-      overflow-y: auto;
+      display: flex;
+      justify-content: center;
+      margin-bottom: 20px;
     }
-
     canvas {
-      display: block;
-      margin: 20px auto;
+      width: 100%;
+      height: auto;
       background: white;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+      box-shadow: 0 0 6px rgba(0,0,0,0.2);
     }
   </style>
 </head>
 <body>
 
-<div id="viewer"></div>
-
 <script type="module">
   import * as pdfjsLib from "./pdf.mjs";
 
-  // Worker
   pdfjsLib.GlobalWorkerOptions.workerSrc = "./pdf.worker.mjs";
 
-  const viewer = document.getElementById("viewer");
   const url = "tress.pdf";
 
-  const loadingTask = pdfjsLib.getDocument({
-    url,
-    rangeChunkSize: 65536   // Progressive load
-  });
+  async function renderPDF() {
+    const loadingTask = pdfjsLib.getDocument({
+      url,
+      rangeChunkSize: 65536 // stream large PDFs
+    });
 
-  loadingTask.promise.then(async pdf => {
-    console.log("PDF loaded. Pages:", pdf.numPages);
-
-    // High-resolution settings
-    const baseScale = 3;                    // Increase for sharper render
-    const dpiScale  = window.devicePixelRatio; // Supports HiDPI screens
+    const pdf = await loadingTask.promise;
 
     for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-
       const page = await pdf.getPage(pageNum);
 
-      const viewport = page.getViewport({
-        scale: baseScale * dpiScale
-      });
+      const viewport = page.getViewport({ scale: 1 });
+
+      const scale = document.body.clientWidth / viewport.width;
+      const scaledViewport = page.getViewport({ scale });
+
+      // Create page container + canvas
+      const container = document.createElement("div");
+      container.className = "page-container";
 
       const canvas = document.createElement("canvas");
       const ctx = canvas.getContext("2d");
 
-      // Render at high resolution internally
-      canvas.width  = viewport.width;
-      canvas.height = viewport.height;
+      canvas.width = scaledViewport.width;
+      canvas.height = scaledViewport.height;
 
-      // Display size (makes the canvas appear normal size)
-      canvas.style.width  = (viewport.width  / dpiScale) + "px";
-      canvas.style.height = (viewport.height / dpiScale) + "px";
+      container.appendChild(canvas);
+      document.body.appendChild(container);
 
-      viewer.appendChild(canvas);
-
-      // Render the page
-      page.render({
+      // Render page
+      await page.render({
         canvasContext: ctx,
-        viewport
-      });
+        viewport: scaledViewport
+      }).promise;
     }
-  });
+  }
+
+  renderPDF();
 </script>
 
 </body>
